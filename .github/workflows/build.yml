@@ -13,28 +13,16 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      # Step 1: Checkout repo
+      # Checkout the repo
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
-      # Step 2: Set up Python
-      - name: Set up Python
-        uses: actions/setup-python@v4
-        with:
-          python-version: '3.10'
-
-      # Step 3: Install dependencies
-      - name: Install dependencies
-        run: |
-          pip install -r requirements.txt
-          pip install pytest
-
-      # Step 4: Run only your unit test file in src/
+      # Run only your unit test file
       - name: Run Unit Tests
         run: python -m pytest src/test_secure_example.py -v
 
-      # Step 5: SonarQube Scan
+      # SonarQube Scan
       - name: SonarQube Scan
         uses: SonarSource/sonarqube-scan-action@v6
         env:
