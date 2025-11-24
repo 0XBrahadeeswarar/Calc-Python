@@ -8,25 +8,29 @@ on:
     types: [opened, synchronize, reopened]
 
 jobs:
-  sonarqube:
-    name: Unit Tests + SonarQube
+  build-and-scan:
+    name: Unit Tests + SonarQube + Docker
     runs-on: ubuntu-latest
 
     steps:
-      # Step 1: Checkout repository
+      # Step 1: Checkout repo
       - uses: actions/checkout@v4
         with:
-          fetch-depth: 0  # required for SonarQube scan
+          fetch-depth: 0
 
-      # Step 2: Run Unit Tests with Coverage
+      # Step 2: Setup Python
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.12'
+
+      # Step 3: Run Unit Tests with Coverage
       - name: Run Unit Tests with Coverage
         run: |
-          # Install required Python modules
           pip install pytest flask pytest-cov
-          # Run tests and generate coverage report in XML format for SonarQube
           python -m pytest src/test_secure_example.py --cov=main --cov-report=xml -v
 
-      # Step 3: SonarQube Scan
+      # Step 4: SonarQube Scan
       - name: SonarQube Scan
         uses: SonarSource/sonarqube-scan-action@v6
         env:
@@ -34,3 +38,15 @@ jobs:
         with:
           args: >
             -Dsonar.python.coverage.reportPaths=coverage.xml
+
+      # Step 5: Build Docker Image
+      - name: Build Docker Image
+        run: |
+          docker build -t myapp:latest .
+
+      # Optional Step 6: Push to Docker Hub (requires secrets)
+      # - name: Push Docker Image
+      #   run: |
+      #     echo ${{ secrets.DOCKER_PASSWORD }} | docker login -u ${{ secrets.DOCKER_USERNAME }} --password-stdin
+      #     docker tag myapp:latest mydockerhubusername/myapp:latest
+      #     docker push mydockerhubusername/myapp:latest
