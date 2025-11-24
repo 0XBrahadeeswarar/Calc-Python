@@ -15,26 +15,13 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          fetch-depth: 0  # Shallow clones should be disabled for a better relevancy of analysis
-
-      # -----------------------------
-      # Install Python & dependencies
-      # -----------------------------
-      - name: Set up Python
-        uses: actions/setup-python@v4
-        with:
-          python-version: '3.10'
-
-      - name: Install dependencies
-        run: |
-          pip install -r requirements.txt
-          pip install pytest
+          fetch-depth: 0
 
       # -----------------------------
       # Run Unit Tests
       # -----------------------------
-      - name: Run Pytest
-        run: pytest -v
+      - name: Run Unit Tests
+        run: python -m pytest -v
 
       # -----------------------------
       # SonarQube Scan
