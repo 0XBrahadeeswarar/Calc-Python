@@ -66,7 +66,7 @@ jobs:
       # Step 9: Generate OWASP ZAP HTML Report
       - name: Generate OWASP ZAP HTML Report
         run: |
-          docker run --rm -v $(pwd):/zap owasp/zap2docker-stable zap-baseline.py -t http://localhost:5000 -g -r /zap/zap_report.html
+          docker run --rm -v $(pwd):/zap zaproxy/zap2docker-stable zap-baseline.py -t http://localhost:5000 -g -r /zap/zap_report.html
         continue-on-error: true
 
       # Step 10: Upload ZAP HTML Report as Artifact (HTML report)
