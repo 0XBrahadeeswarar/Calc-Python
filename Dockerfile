@@ -1,12 +1,11 @@
 # Use official Python image
 FROM python:3.12-slim
 
-# Set working directory
+# Set working directory inside container
 WORKDIR /app
 
-# Copy app and requirements
-COPY main.py .
-COPY src/ src/
+# Copy all application code from src/ into /app
+COPY src/ .  # copies main.py and other src files into /app/
 
 # Install dependencies
 RUN pip install flask
