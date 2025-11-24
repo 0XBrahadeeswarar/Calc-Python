@@ -9,19 +9,22 @@ on:
 
 jobs:
   sonarqube:
-    name: SonarQube
+    name: SonarQube and Unit Tests
     runs-on: ubuntu-latest
 
     steps:
+      # Step 1: Checkout repository
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
+      # Step 2: Run Unit Tests
       - name: Run Unit Tests
         run: |
           pip install pytest
-          PYTHONPATH=. python -m pytest src/test_secure_example.py -v
+          python -m pytest src/test_secure_example.py -v
 
+      # Step 3: SonarQube Scan
       - name: SonarQube Scan
         uses: SonarSource/sonarqube-scan-action@v6
         env:
