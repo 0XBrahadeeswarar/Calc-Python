@@ -13,16 +13,16 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      # Checkout the repo
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
-      # Run only your unit test file
+      - name: Install pytest
+        run: pip install pytest
+
       - name: Run Unit Tests
         run: python -m pytest src/test_secure_example.py -v
 
-      # SonarQube Scan
       - name: SonarQube Scan
         uses: SonarSource/sonarqube-scan-action@v6
         env:
