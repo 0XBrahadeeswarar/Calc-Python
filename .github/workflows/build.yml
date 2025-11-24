@@ -59,7 +59,7 @@ jobs:
         run: |
           sleep 10  # Wait for 10 seconds to ensure Flask app has started
 
-      # Step 9: Run OWASP ZAP DAST Scan with Direct Docker Command
+      # Step 9: Run OWASP ZAP DAST Scan with Correct Command
       - name: Run OWASP ZAP DAST Scan
         run: |
           docker run --rm -v $(pwd):/zap -u zaproxy/zap2docker-stable zap-baseline.py -t http://localhost:5000 -g -r /zap/zap_report.html
