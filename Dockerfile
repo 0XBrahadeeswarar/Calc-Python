@@ -2,7 +2,7 @@ FROM python:3.12-slim
 
 WORKDIR /app
 
-# Copy all code from src/ folder into /app
+
 COPY src/ .
 
 # Install dependencies
