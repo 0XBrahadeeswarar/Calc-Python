@@ -9,20 +9,28 @@ on:
 
 jobs:
   sonarqube:
-    name: SonarQube and Unit Tests
+    name: Unit Tests + SonarQube
     runs-on: ubuntu-latest
 
     steps:
+      # Step 1: Checkout repository
       - uses: actions/checkout@v4
         with:
-          fetch-depth: 0
+          fetch-depth: 0  # required for SonarQube scan
 
-      - name: Run Unit Tests
+      # Step 2: Run Unit Tests with Coverage
+      - name: Run Unit Tests with Coverage
         run: |
-          pip install pytest flask
-          python -m pytest src/test_secure_example.py -v
+          # Install required Python modules
+          pip install pytest flask pytest-cov
+          # Run tests and generate coverage report in XML format for SonarQube
+          python -m pytest src/test_secure_example.py --cov=main --cov-report=xml -v
 
+      # Step 3: SonarQube Scan
       - name: SonarQube Scan
         uses: SonarSource/sonarqube-scan-action@v6
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+        with:
+          args: >
+            -Dsonar.python.coverage.reportPaths=coverage.xml
