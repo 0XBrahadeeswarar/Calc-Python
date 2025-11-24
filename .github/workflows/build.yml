@@ -49,17 +49,7 @@ jobs:
         run: |
           docker run -d -p 8000:5000 --name myapp_container myapp:latest
 
-      # Step 7: Wait for Flask app to be ready
-      - name: Wait for Flask app
-        run: |
-          for i in {1..30}; do
-            if curl -s http://127.0.0.1:8000 >/dev/null; then
-              echo "Flask is up!"
-              break
-            fi
-            echo "Waiting for Flask..."
-            sleep 2
-          done
+      
 
       - name: ZAP Full Scan
         uses: zaproxy/action-full-scan@v0.13.0
