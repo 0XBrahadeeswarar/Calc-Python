@@ -5,7 +5,7 @@ WORKDIR /app
 
 COPY src/ .
 
-# Install dependencies
+
 RUN pip install flask
 
 # Expose Flask port
