@@ -1,4 +1,4 @@
-name: Build, Scan, and Test
+name: Build, Scan, Test
 
 on:
   push:
