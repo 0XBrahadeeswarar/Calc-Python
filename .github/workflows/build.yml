@@ -29,3 +29,45 @@ jobs:
         run: |
           pip install pytest flask pytest-cov
           python -m pytest src/test_secure_example.py --cov=main --cov-report=xml -v
+
+      # Step 4: SonarQube Scan
+      - name: SonarQube Scan
+        uses: SonarSource/sonarqube-scan-action@v6
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+        with:
+          args: >
+            -Dsonar.python.coverage.reportPaths=coverage.xml
+
+      # Step 5: Build Docker Image
+      - name: Build Docker Image
+        run: |
+          docker build -t myapp:latest .
+
+      # Step 6: Docker Login (authentication with Docker Hub)
+      - name: Docker Login
+        run: |
+          echo ${{ secrets.DOCKER_PASSWORD }} | docker login -u ${{ secrets.DOCKER_USERNAME }} --password-stdin
+
+      # Step 7: Run Docker Container (Flask app)
+      - name: Run Docker Container
+        run: |
+          docker run -d -p 5000:5000 myapp:latest  # Run container in detached mode
+
+      # Step 8: Wait for Flask app to be ready
+      - name: Wait for Flask app to be ready
+        run: |
+          sleep 10  # Wait for 10 seconds to ensure Flask app has started
+
+      # Step 9: Run OWASP ZAP DAST Scan with Direct Docker Command
+      - name: Run OWASP ZAP DAST Scan
+        run: |
+          docker run --rm -v $(pwd):/zap -u zaproxy/zap2docker-stable zap-baseline.py -t http://localhost:5000 -g -r /zap/zap_report.html
+        continue-on-error: true  # Allow errors but still proceed with the pipeline
+
+      # Step 10: Upload OWASP ZAP HTML Report as Artifact
+      - name: Upload ZAP HTML Report as Artifact
+        uses: actions/upload-artifact@v4  # Updated to v4
+        with:
+          name: zap-report
+          path: /zap/zap_report.html
