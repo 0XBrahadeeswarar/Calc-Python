@@ -17,17 +17,11 @@ jobs:
         with:
           fetch-depth: 0
 
-      # -----------------------------
-      # Run Unit Tests
-      # -----------------------------
       - name: Run Unit Tests
         run: |
           pip install pytest
-          python -m pytest test_secure_example.py -v
+          python -m pytest src/test_secure_example.py -v
 
-      # -----------------------------
-      # SonarQube Scan
-      # -----------------------------
       - name: SonarQube Scan
         uses: SonarSource/sonarqube-scan-action@v6
         env:
