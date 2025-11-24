@@ -9,8 +9,14 @@ on:
 
 jobs:
   build-and-scan:
-    name: Unit Tests + SonarQube + Docker + OWASP ZAP
+    name: Unit Tests + SonarQube + Docker + OWASP ZAP API Scan
     runs-on: ubuntu-latest
+
+    services:
+      flask:
+        image: myapp:latest
+        ports:
+          - 5000:5000
 
     steps:
       # Step 1: Checkout the repository
@@ -47,38 +53,40 @@ jobs:
       # Step 6: Run Docker Container
       - name: Run Docker Container
         run: |
-          docker run -d -p 8000:5000 --name myapp_container myapp:latest
+          docker run -d -p 8000:5000 myapp:latest  # Expose Flask app on port 8000
 
       # Step 7: Wait for Flask app to be ready
-      - name: Wait for Flask app
+      - name: Wait for Flask app to be ready
         run: |
-          echo "Waiting for Flask app to be ready..."
-          for i in {1..30}; do
+          for i in {1..10}; do
             if curl -s http://127.0.0.1:8000 >/dev/null; then
-              echo "Flask app is ready!"
+              echo "Flask app is up"
               break
             fi
-            sleep 2
+            echo "Waiting for Flask app..."
+            sleep 5
           done
 
-      # Step 8: Run OWASP ZAP Full Scan
-      - name: ZAP Full Scan
-        uses: zaproxy/action-full-scan@v0.13.0
+      # Step 8: Run OWASP ZAP API Scan
+      - name: ZAP API Scan
+        uses: zaproxy/action-api-scan@v0.10.0
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
-          target: http://127.0.0.1:8000
+          target: http://127.0.0.1:8000          # API endpoint
+          format: openapi                         # Adjust if using SOAP or GraphQL
+          rules_file_name: zap_rules.yaml         # Optional custom ZAP rules
           docker_name: ghcr.io/zaproxy/zaproxy:latest
-          cmd_options: "-quickstart -d"
-          issue_title: ZAP Full Scan Report
+          cmd_options: "-r"
+          issue_title: "ZAP API Scan Report"
           fail_action: true
           allow_issue_writing: true
-          artifact_name: zap_scan_report
+          artifact_name: zap_api_report
 
-      # Step 9: Upload ZAP HTML Report as Artifact
-      - name: Upload ZAP HTML Report
+      # Step 9: Upload ZAP API Scan Report as Artifact
+      - name: Upload ZAP API Scan Report
         uses: actions/upload-artifact@v4
         with:
-          name: zap-report
+          name: zap-api-report
           path: /zap/zap_report.html
           if-no-files-found: warn
           compression-level: 6
