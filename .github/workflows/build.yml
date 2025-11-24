@@ -65,7 +65,7 @@ jobs:
           docker run --rm -v $(pwd):/zap -u zaproxy/zap2docker-stable zap-baseline.py -t http://localhost:5000 -g -r /zap/zap_report.html
         continue-on-error: true
 
-      # Step 9: Upload OWASP ZAP Report as Artifact (using latest v3)
+      # Step 9: Upload OWASP ZAP Report as Artifact (using v3)
       - name: Upload ZAP HTML Report as Artifact
         uses: actions/upload-artifact@v3
         with:
