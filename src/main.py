@@ -1,45 +1,70 @@
-# vulnerable_example.py
-# WARNING: This code is intentionally insecure for SonarQube testing purposes only.
-# DO NOT use in production environments.
+# secure_example.py
+# This is the secure version of the previous vulnerable code.
 
 import os
 import sqlite3
-from flask import Flask, request
+from flask import Flask, request, jsonify, abort
 
 app = Flask(__name__)
 
-# --- Vulnerability 1: Hardcoded credentials ---
-DB_USER = "admin"
-DB_PASS = "password123"  # Sensitive data hardcoded
+# -------------------------------
+# FIX 1: Remove hardcoded credentials
+# -------------------------------
+# Credentials must come from environment variables
+DB_USER = os.getenv("DB_USER", "")
+DB_PASS = os.getenv("DB_PASS", "")
 
-# --- Vulnerability 2: SQL Injection ---
+# -------------------------------
+# FIX 2: Prevent SQL Injection using parameterized queries
+# -------------------------------
 def get_user_info(username):
     conn = sqlite3.connect("test.db")
     cursor = conn.cursor()
-    # Direct string concatenation with user input (SQL Injection risk)
-    query = f"SELECT * FROM users WHERE username = '{username}'"
-    cursor.execute(query)
+
+    # SAFE: Use parameterized query
+    query = "SELECT * FROM users WHERE username = ?"
+    cursor.execute(query, (username,))
+
     result = cursor.fetchall()
     conn.close()
     return result
 
-# --- Vulnerability 3: Command Injection ---
+# -------------------------------
+# FIX 3: Prevent Command Injection
+# Only allow safe IP pattern (digits and dots)
+# -------------------------------
+import re
+
 @app.route("/ping")
 def ping():
     ip = request.args.get("ip", "")
-    # Directly passing user input to system command
-    os.system(f"ping -c 1 {ip}")
-    return f"Pinged {ip}"
 
-# --- Vulnerability 4: Insecure Deserialization ---
-import pickle
+    # Validate IP format (simple IPv4 check)
+    if not re.match(r"^\d{1,3}(\.\d{1,3}){3}$", ip):
+        abort(400, "Invalid IP address.")
+
+    # SAFE: Use subprocess with args list (no shell)
+    import subprocess
+    try:
+        subprocess.run(["ping", "-c", "1", ip], check=True)
+    except Exception:
+        abort(500, "Ping failed.")
+
+    return jsonify({"message": f"Pinged {ip}"})
+
+# -------------------------------
+# FIX 4: Prevent Insecure Deserialization
+# Reject pickle entirely (SAFE)
+# -------------------------------
 @app.route("/load")
 def load_data():
     data = request.args.get("data", "")
-    # Loading untrusted data (RCE risk)
-    obj = pickle.loads(bytes.fromhex(data))
-    return str(obj)
 
-# --- Vulnerability 5: Debug mode enabled ---
+    # NEVER trust pickle data → reject it
+    abort(400, "Insecure operation blocked: Deserialization disabled.")
+
+# -------------------------------
+# FIX 5: Disable debug mode
+# -------------------------------
 if __name__ == "__main__":
-    app.run(debug=True)  # Debug mode exposes sensitive info
+    app.run(debug=False)  # Safe mode (no debug)
