@@ -7,6 +7,8 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
 from main import app, get_user_info
 from flask.testing import FlaskClient
+import sqlite3
+import subprocess
 
 # -------------------------------
 # Fixture: Flask test client
@@ -20,12 +22,15 @@ def client():
 # Test get_user_info() function
 # -------------------------------
 def test_get_user_info(tmp_path, monkeypatch):
-    import sqlite3
-
     db_path = tmp_path / "test.db"
-    monkeypatch.setattr(sqlite3, "connect", lambda _: sqlite3.connect(db_path))
 
-    # Setup DB
+    # Save the original sqlite3.connect
+    original_connect = sqlite3.connect
+
+    # Patch sqlite3.connect to use our temp DB
+    monkeypatch.setattr(sqlite3, "connect", lambda _: original_connect(db_path))
+
+    # Setup temporary DB
     conn = sqlite3.connect(db_path)
     cur = conn.cursor()
     cur.execute("CREATE TABLE users (username TEXT, email TEXT)")
@@ -42,12 +47,8 @@ def test_get_user_info(tmp_path, monkeypatch):
 # Test /ping endpoint with valid IP
 # -------------------------------
 def test_ping_valid_ip(client, monkeypatch):
-    import subprocess
-
-    def mock_run(cmd, check):
-        return None
-
-    monkeypatch.setattr(subprocess, "run", mock_run)
+    # Mock subprocess.run so no real ping is executed
+    monkeypatch.setattr(subprocess, "run", lambda cmd, check: None)
 
     response = client.get("/ping?ip=127.0.0.1")
     assert response.status_code == 200
