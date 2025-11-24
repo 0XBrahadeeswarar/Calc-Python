@@ -9,7 +9,7 @@ on:
 
 jobs:
   build-and-scan:
-    name: Unit Tests + SonarQube + Docker + OWASP ZAP
+    name: Unit Tests + SonarQube + Docker + OWASP ZAP API Scan
     runs-on: ubuntu-latest
 
     steps:
@@ -47,29 +47,39 @@ jobs:
       # Step 6: Run Docker Container
       - name: Run Docker Container
         run: |
-          docker run -d -p 8000:5000 myapp:latest  # Expose Flask app on port 8000
+          docker run -d -p 8000:5000 --name myapp_container myapp:latest
 
-      
+      # Step 7: Wait for Flask app to be ready
+      - name: Wait for Flask app to be ready
+        run: |
+          sleep 10  # Wait for 10 seconds to ensure Flask app has started
 
-      # Step 8: Run OWASP ZAP Full Scan
-      - name: ZAP Full Scan
-        uses: zaproxy/action-full-scan@v0.13.0
+      # Step 8: ZAP API Scan
+      - name: ZAP API Scan
+        uses: zaproxy/action-api-scan@v0.10.0
         with:
-          token: ${{ secrets.GITHUB_TOKEN }}  # Default GitHub token
-          target: http://host.docker.internal:8000  # Use host.docker.internal instead of localhost
-          docker_name: ghcr.io/zaproxy/zaproxy:latest  # Docker image to use for the scan
-          cmd_options: -quickstart -d  # Removed unnecessary flags, added -d for debugging
-          issue_title: ZAP Full Scan Report  # Title for GitHub issues created (if any)
-          fail_action: true  # Fail action if ZAP finds security issues
-          allow_issue_writing: true  # Allow GitHub issues to be created for findings
-          artifact_name: zap_scan_report  # Name for the ZAP report artifact
+          token: ${{ secrets.GITHUB_TOKEN }}         # default GitHub token
+          target: http://host.docker.internal:8000/api  # Replace with your API base URL
+          format: openapi                             # 'openapi', 'soap', or 'graphql'
+          docker_name: ghcr.io/zaproxy/zaproxy:latest
+          cmd_options: "-d"                            # Debug mode
+          issue_title: ZAP API Scan Report
+          fail_action: true
+          allow_issue_writing: true
+          artifact_name: zap_api_report
 
-      # Step 9: Upload ZAP HTML Report as Artifact
-      - name: Upload ZAP HTML Report as Artifact
+      # Step 9: Upload ZAP API Report as Artifact
+      - name: Upload ZAP API Report
         uses: actions/upload-artifact@v4
         with:
-          name: zap-report
-          path: /zap/zap_report.html  # Path to the generated ZAP HTML report
+          name: zap-api-report
+          path: /zap_api_report
           if-no-files-found: warn
           compression-level: 6
           overwrite: false
+
+      # Step 10: Stop Docker container
+      - name: Stop Docker Container
+        run: |
+          docker stop myapp_container
+          docker rm myapp_container
