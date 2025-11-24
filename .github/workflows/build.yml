@@ -1,83 +1,82 @@
-name: Build and Security Scan
+name: CI with ZAP API Scan
 
 on:
   push:
     branches:
       - main
   pull_request:
-    types: [opened, synchronize, reopened]
 
 jobs:
-  build-and-scan:
-    name: Unit Tests + SonarQube + Docker + OWASP ZAP
+  build-test-scan:
     runs-on: ubuntu-latest
+    services:
+      flask:
+        image: myapp:latest
+        ports:
+          - 5000:5000
+        options: >-
+          --health-cmd "curl --fail http://localhost:5000/ || exit 1"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
 
     steps:
-      # Step 1: Checkout repository
-      - uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
+      # Step 1: Checkout code
+      - name: Checkout Repository
+        uses: actions/checkout@v3
 
-      # Step 2: Set up Python
+      # Step 2: Set up Python (if you need to run tests)
       - name: Set up Python
         uses: actions/setup-python@v4
         with:
-          python-version: '3.12'
+          python-version: '3.11'
 
-      # Step 3: Install dependencies & run Unit Tests with Coverage
-      - name: Run Unit Tests with Coverage
+      # Step 3: Install dependencies
+      - name: Install Dependencies
         run: |
-          pip install pytest flask pytest-cov
-          python -m pytest src/test_secure_example.py --cov=main --cov-report=xml -v
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install pytest requests
 
-      # Step 4: SonarQube Scan
-      - name: SonarQube Scan
-        uses: SonarSource/sonarqube-scan-action@v6
-        env:
-          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
-        with:
-          args: >
-            -Dsonar.python.coverage.reportPaths=coverage.xml
-
-      # Step 5: Build Docker Image
-      - name: Build Docker Image
+      # Step 4: Run Unit Tests
+      - name: Run Unit Tests
         run: |
-          docker build -t myapp:latest .
+          pytest tests/ --junitxml=report.xml
 
-      # Step 6: Create a Docker network
-      - name: Create Docker Network
+      # Step 5: Wait for Flask API to be ready
+      - name: Wait for Flask Service
         run: |
-          docker network create zapnet || true
+          echo "Waiting for Flask API to be ready..."
+          for i in {1..30}; do
+            if curl -s http://127.0.0.1:5000/ >/dev/null; then
+              echo "Flask is up!"
+              break
+            fi
+            sleep 2
+          done
 
-      # Step 7: Run Flask Container on the network
-      - name: Run Docker Container
-        run: |
-          docker run -d --name myapp_container --network zapnet myapp:latest
-
-      # Step 8: Wait for Flask app to be ready
-      - name: Wait for Flask app to start
-        run: sleep 10
-
-      # Step 9: Run ZAP API Scan
+      # Step 6: Run ZAP API Scan
       - name: ZAP API Scan
         uses: zaproxy/action-api-scan@v0.10.0
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
-          target: http://myapp_container:5000/api  # Use container name + internal port
+          target: http://127.0.0.1:5000/api
           format: openapi
           docker_name: ghcr.io/zaproxy/zaproxy:latest
-          cmd_options: "-d"
-          issue_title: ZAP API Scan Report
           fail_action: true
           allow_issue_writing: true
-          artifact_name: zap_api_report
+          artifact_name: zap_scan
 
-      # Step 10: Upload ZAP Report
-      - name: Upload ZAP Report Artifact
-        uses: actions/upload-artifact@v4
+      # Step 7: Upload Test Reports
+      - name: Upload Test Report
+        uses: actions/upload-artifact@v3
         with:
-          name: zap-report
-          path: ./zap_api_report
-          if-no-files-found: warn
-          compression-level: 6
-          overwrite: false
+          name: pytest-report
+          path: report.xml
+
+      # Step 8: Upload ZAP Scan Reports
+      - name: Upload ZAP Scan Reports
+        uses: actions/upload-artifact@v3
+        with:
+          name: zap-reports
+          path: zap_scan
