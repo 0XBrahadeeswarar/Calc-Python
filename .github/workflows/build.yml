@@ -62,12 +62,12 @@ jobs:
       # Step 9: Run OWASP ZAP DAST Scan with Correct Command
       - name: Run OWASP ZAP DAST Scan
         run: |
-          docker run --rm -v $(pwd):/zap -u zaproxy/zap2docker-stable zap-baseline.py -t http://localhost:5000 -g -r /zap/zap_report.html
+          docker run --rm -v $(pwd):/zap zaproxy/zap2docker-stable zap-baseline.py -t http://localhost:5000 -g -r /zap/zap_report.html
         continue-on-error: true  # Allow errors but still proceed with the pipeline
 
       # Step 10: Upload OWASP ZAP HTML Report as Artifact
       - name: Upload ZAP HTML Report as Artifact
-        uses: actions/upload-artifact@v4  # Updated to v4
+        uses: actions/upload-artifact@v4
         with:
           name: zap-report
           path: /zap/zap_report.html
