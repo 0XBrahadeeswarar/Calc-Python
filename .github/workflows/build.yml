@@ -1,4 +1,4 @@
-name: Build and Scan
+name: Build, Scan, and Test
 
 on:
   push:
@@ -6,10 +6,12 @@ on:
       - main
   pull_request:
     types: [opened, synchronize, reopened]
+  schedule:
+    - cron: '0 0 * * *'  # Nightly scan at 00:00 UTC
 
 jobs:
   build-and-scan:
-    name: Unit Tests + SonarQube + Docker Build
+    name: Unit Tests + SonarQube + Docker Build + OWASP ZAP Scan
     runs-on: ubuntu-latest
 
     steps:
@@ -45,53 +47,26 @@ jobs:
             sonar.cpd.exclusions=**/*test*.py
             sonar.verbose=true
 
-      # Build Docker Image only (no push)
+      # Build Docker Image (no push)
       - name: Build Docker Image
         run: |
           docker build -t brahadees/myapp:latest .
 
----
-
-name: OWASP ZAP Dynamic Scan
-
-on:
-  push:
-    branches:
-      - main
-  pull_request:
-    types: [opened, synchronize, reopened]
-  schedule:
-    - cron: '0 0 * * *'      # Nightly scan at 00:00 UTC
-
-jobs:
-  zap_scan:
-    runs-on: ubuntu-latest
-
-    steps:
-      # Checkout your code
-      - uses: actions/checkout@v4
-
-      # Set up Python
-      - name: Set up Python
-        uses: actions/setup-python@v4
-        with:
-          python-version: '3.12'
-
-      # Install Flask and start app
-      - name: Install dependencies and start app
+      # Install Flask and start app in background
+      - name: Install dependencies and start Flask app
         run: |
           pip install flask
-          nohup python src/main.py &  # Start the Flask app (using correct path)
+          nohup python src/main.py &  # Start Flask app in background
 
       # Wait for Flask API to start
       - name: Wait for Flask API
-        run: sleep 10
+        run: sleep 10  # Wait for 10 seconds for Flask to start
 
       # Run OWASP ZAP Full Scan
       - name: ZAP Full Scan
         uses: zaproxy/action-full-scan@v0.13.0
         with:
-          target: 'http://localhost:5000/'   # Ensure you're using localhost
+          target: 'http://localhost:5000/'  # Use localhost to access Flask app inside the runner
           allow_issue_writing: false
           rules_file_name: ''
-          # DO NOT include artifact_name input!
+          fail_action: true  # Fail the job if ZAP finds any security issues
